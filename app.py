@@ -1,40 +1,35 @@
-import os
-import io
-import json
-import base64
-import random
-import qrcode
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 import mysql.connector
-
-from datetime import datetime, timezone
-from collections import defaultdict
-
-from flask import (
-    Flask, render_template, request, redirect, url_for,
-    flash, session, send_file, jsonify
-)
-from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
-
 import firebase_admin
 from firebase_admin import credentials, firestore
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timezone
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import io
+import random
+import qrcode
+import base64
+import os
+from collections import defaultdict
+from werkzeug.utils import secure_filename
 from twilio.rest import Client
-from flask_babelplus import Babel, gettext as _
-from dotenv import load_dotenv
+from flask_babelplus import Babel
+from flask_babelplus import gettext as _
 
-# Load local env vars
+# Load environment variables using python-dotenv
+from dotenv import load_dotenv
 load_dotenv("database.env")
 
-# Flask setup
-app = Flask(__name__, static_folder="static")
-app.secret_key = os.environ["FLASK_SECRET_KEY"]
+# Initialize Flask app with secret key from environment variables
+app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 
-# Babel (i18n)
+# Flask-Babel configuration
 app.config['BABEL_DEFAULT_LOCALE'] = 'en'
 app.config['BABEL_TRANSLATION_DIRECTORIES'] = 'translations'
 babel = Babel(app)
-
-
 
 @babel.localeselector
 def get_locale():
@@ -42,51 +37,30 @@ def get_locale():
 
 @app.route("/change_language", methods=["POST"])
 def change_language():
-    lang = request.form.get("language")
-    if lang:
-        session["language"] = lang
+    language = request.form.get("language")
+    if language:
+        session["language"] = language
         flash(_("Language updated successfully."), "success")
     else:
         flash(_("Please select a language."), "danger")
     return redirect(url_for("settings"))
-
-# Decode Firebase credentials from FIREBASE_CREDENTIALS (base64 JSON)
-fb_b64 = os.getenv("FIREBASE_CREDENTIALS")
-if not fb_b64:
-    raise RuntimeError("FIREBASE_CREDENTIALS environment variable not set")
-fb_json = base64.b64decode(fb_b64)
-fb_dict = json.loads(fb_json)
-cred = credentials.Certificate(fb_dict)
-firebase_admin.initialize_app(cred)
-firestore_db = firestore.client()
 
 # --------------------------
 # MySQL Connection Helper
 # --------------------------
 def get_mysql_cursor():
     conn = mysql.connector.connect(
-        host=os.getenv("MYSQL_HOST", "localhost"),
-        user=os.getenv("MYSQL_USER", "root"),
-        password=os.getenv("MYSQL_PASSWORD", "root"),
-        database=os.getenv("MYSQL_DATABASE", "hope_pay")
+        host=os.environ.get("MYSQL_HOST", "localhost"),
+        user=os.environ.get("MYSQL_USER", "root"),
+        password=os.environ.get("MYSQL_PASSWORD", "root"),
+        database=os.environ.get("MYSQL_DATABASE", "hope_pay")
     )
     return conn, conn.cursor(dictionary=True)
 
 # --------------------------
 # Initialize Firebase Firestore
 # --------------------------
-fb_b64 = os.getenv("FIREBASE_CREDENTIALS")
-if fb_b64:
-    # Production: decode the base64 JSON from env var
-    fb_json = base64.b64decode(fb_b64)
-    fb_dict = json.loads(fb_json)
-    cred = credentials.Certificate(fb_dict)
-else:
-    # Development: fall back to your local service‑account file
-    # Make sure this filename matches exactly what’s in your project root
-    local_path = "firebase_b64.txt"
-    cred = credentials.Certificate(local_path)
-
+cred = credentials.Certificate(os.environ.get("FIREBASE_CERT_PATH"))
 firebase_admin.initialize_app(cred)
 firestore_db = firestore.client()
 
@@ -94,7 +68,9 @@ firestore_db = firestore.client()
 # Helper: Convert Firestore Timestamp -> String
 # --------------------------
 def convert_firestore_ts(ts):
-    return ts.strftime("%b %d, %I:%M %p - Settled") if ts else "N/A"
+    if not ts:
+        return "N/A"
+    return ts.strftime("%b %d, %I:%M %p - Settled")
 
 # --------------------------
 # Helper: Get User Balance
@@ -147,17 +123,21 @@ def generate_unique_card_number():
 # --------------------------
 # Twilio SMS Sending Helper
 # --------------------------
-def send_sms(phone, text):
-    client = Client(
-        os.environ["TWILIO_ACCOUNT_SID"],
-        os.environ["TWILIO_AUTH_TOKEN"]
-    )
+def send_sms(phone, message_text):
+    twilio_account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    twilio_auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    twilio_phone = os.environ.get("TWILIO_PHONE")
+    client = Client(twilio_account_sid, twilio_auth_token)
     try:
-        msg = client.messages.create(body=text,
-                                     from_=os.environ["TWILIO_PHONE"],
-                                     to=phone)
-        return msg.sid
-    except:
+        message = client.messages.create(
+            body=message_text,
+            from_=twilio_phone,
+            to=phone
+        )
+        print("SMS sent successfully. SID:", message.sid)
+        return message.sid
+    except Exception as e:
+        print("SMS failed with error:", e)
         return None
 
 # --------------------------
@@ -806,86 +786,77 @@ def profile():
 # --- Download Transactions (Last 5 as PDF) ---
 @app.route("/download_transactions")
 def download_transactions():
-    child = request.args.get("child_username")
-    if not child:
-        flash(_("No child selected."), "danger")
-        return redirect(url_for("kid_safety"))
-
-    sent = firestore_db.collection("transactions")\
-        .where("sender","==",child).stream()
-    rec  = firestore_db.collection("transactions")\
-        .where("recipient","==",child).stream()
-
-    txs = []
-    for doc in sent:
-        d = doc.to_dict()
-        d["type"] = "Sent"
-        d["timestamp_str"] = convert_firestore_ts(d.get("timestamp"))
-        txs.append(d)
-    for doc in rec:
-        d = doc.to_dict()
-        d["type"] = "Received"
-        d["timestamp_str"] = convert_firestore_ts(d.get("timestamp"))
-        txs.append(d)
-
-    txs.sort(key=lambda t: t.get("timestamp").timestamp() if t.get("timestamp") else datetime.min,
-             reverse=True)
-
+    child_username = request.args.get("child_username")
+    child_sent = firestore_db.collection("transactions").where("sender", "==", child_username).stream()
+    child_received = firestore_db.collection("transactions").where("recipient", "==", child_username).stream()
+    all_transactions = []
+    for doc in child_sent:
+        data = doc.to_dict()
+        data["type"] = "Sent"
+        data["timestamp_str"] = convert_firestore_ts(data.get("timestamp"))
+        all_transactions.append(data)
+    for doc in child_received:
+        data = doc.to_dict()
+        data["type"] = "Received"
+        data["timestamp_str"] = convert_firestore_ts(data.get("timestamp"))
+        all_transactions.append(data)
+    all_transactions.sort(
+        key=lambda t: t.get("timestamp").timestamp() if t.get("timestamp") else datetime.min,
+        reverse=True
+    )
     from reportlab.lib.pagesizes import letter
     from reportlab.pdfgen import canvas
-
     buffer = io.BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
-    w, h = letter
-    top, bottom = 50, 50
-    y = h - top
-    line_h = 20
-    extra = 30
-
-    for i, tx in enumerate(txs, 1):
-        block_h = 30 + 7*line_h + extra
-        if y - block_h < bottom:
+    width, height = letter
+    top_margin = 50
+    bottom_margin = 50
+    current_y = height - top_margin
+    transaction_spacing = 30
+    for idx, tx in enumerate(all_transactions, start=1):
+        block_height = 30 + (7 * 20) + transaction_spacing
+        if current_y - block_height < bottom_margin:
             pdf.showPage()
-            y = h - top
-
+            current_y = height - top_margin
         pdf.setFont("Helvetica-Bold", 16)
-        pdf.drawString(50, y, f"Transaction {i}")
-        y -= 30
+        pdf.drawString(50, current_y, f"Transaction {idx}")
+        current_y -= 30
         pdf.setFont("Helvetica", 12)
-        for fld in ("type","sender","recipient","amount","timestamp_str","status","category"):
-            pdf.drawString(50, y, f"{fld.title()}: {tx.get(fld, 'N/A')}")
-            y -= line_h
-        y -= extra
-
+        pdf.drawString(50, current_y, f"Type: {tx.get('type', 'N/A')}")
+        current_y -= 20
+        pdf.drawString(50, current_y, f"Sender: {tx.get('sender', 'N/A')}")
+        current_y -= 20
+        pdf.drawString(50, current_y, f"Recipient: {tx.get('recipient', 'N/A')}")
+        current_y -= 20
+        pdf.drawString(50, current_y, f"Amount: {tx.get('amount', 'N/A')}")
+        current_y -= 20
+        pdf.drawString(50, current_y, f"Timestamp: {tx.get('timestamp_str', 'N/A')}")
+        current_y -= 20
+        pdf.drawString(50, current_y, f"Status: {tx.get('status', 'N/A')}")
+        current_y -= 20
+        pdf.drawString(50, current_y, f"Category: {tx.get('category', 'N/A')}")
+        current_y -= transaction_spacing
     pdf.save()
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True,
-                     download_name=f"{child}_transactions.pdf",
-                     mimetype="application/pdf")
-
+    return send_file(buffer, as_attachment=True, download_name=f"{child_username}_transactions.pdf", mimetype='application/pdf')
 
 
 @app.route("/send_verification_code_for_pin", methods=["POST"])
 def send_verification_code_for_pin():
-    if "username" not in session:
-        return jsonify(success=False, message=_("Not logged in.")), 403
-
-    conn, cur = get_mysql_cursor()
-    cur.execute("SELECT phone FROM users WHERE username=%s",
-                (session["username"],))
-    row = cur.fetchone()
-    cur.close(); conn.close()
-
-    if not row or not row.get("phone"):
-        return jsonify(success=False, message=_("No phone on file.")), 400
-
+    # For example, generate a new verification code.
     otp = str(random.randint(100000, 999999))
+
+    # (Optionally) store the OTP in session or in your database
     session["pin_otp"] = otp
 
-    if not send_sms(row["phone"], _("Your PIN code is: ") + otp):
-        return jsonify(success=False, message=_("SMS send failed.")), 500
+    # Send the OTP via your SMS helper.
+    # You might get the user's phone from your session or from the current user's record.
+    phone = get_user_phone(session["username"]) if "username" in session else None
+    if phone:
+        send_sms(phone, f"Your PIN update verification code is: {otp}")
 
-    return jsonify(success=True, message=_("Verification code sent.")), 200
+    # Return a JSON response so the fetch call can know the status.
+    return {"status": "success", "message": "Verification code sent."}
 
 
 if __name__ == "__main__":
