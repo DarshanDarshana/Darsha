@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction History</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 500px;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .transaction-list {
+            margin-top: 10px;
+        }
+
+        .transaction {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            text-align: center;
+            line-height: 40px;
+            margin-right: 15px;
+        }
+
+        .transaction-info {
+            flex-grow: 1;
+        }
+
+        .name {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .details {
+            font-size: 14px;
+            color: gray;
+        }
+
+        .amount {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .added {
+            color: green;
+        }
+
+        .sent {
+            color: red;
+        }
+
+        .pending {
+            color: orange;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Transaction History</h2>
+        <div class="transaction-list">
+            {% for tx in transactions %}
+            <div class="transaction">
+                <!-- Display profile picture initial; you may customize this based on your data -->
+                <div class="profile-pic" style="background-color: {{ tx.profile_color|default('#87CEFA') }};">
+                    {{ tx.initial|default(tx.name[0] if tx.name else 'U') }}
+                </div>
+                <div class="transaction-info">
+                    <p class="name">{{ tx.name|default('Unknown User') }}</p>
+                    <p class="details">{{ tx.timestamp_str }}</p>
+                </div>
+                <!-- Conditionally set the class based on transaction type/status -->
+                <p class="amount 
+           {% if tx.type == 'Sent' %}
+             sent
+           {% elif tx.status == 'Pending' %}
+             pending
+           {% else %}
+             added
+           {% endif %}">
+                    {{ tx.amount }}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+
+</html>

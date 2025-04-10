@@ -1,0 +1,256 @@
+{% extends 'layout.html' %}
+{% block content %}
+{% if not pin_set %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        alert("You must set your PIN before making a payment. Redirecting to settings.");
+        window.location.href = "{{ url_for('settings') }}";
+    });
+</script>
+{% endif %}
+<style>
+    .pay-container {
+        max-width: 500px;
+        margin: 40px auto;
+        background-color: #fff;
+        padding: 20px 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        text-align: center;
+    }
+    .scan-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        cursor: pointer;
+        background-color: #007bff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 16px;
+        transition: background-color 0.3s ease;
+    }
+    .scan-btn img {
+        width: 30px;
+        height: 30px;
+        margin-right: 10px;
+    }
+    .scan-btn:hover {
+        background-color: #0056b3;
+    }
+    .pay-container form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .pay-container label {
+        display: block;
+        margin: 10px 0 5px;
+        width: 100%;
+        font-weight: bold;
+        color: #555;
+    }
+    .pay-container input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        font-size: 14px;
+    }
+    .pay-container select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        font-size: 14px;
+    }
+    .pay-container button {
+        background-color: #007bff;
+        color: #fff;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.2s ease-in-out;
+    }
+    .pay-container button:hover {
+        background-color: #0056b3;
+    }
+    .flash-messages {
+        margin-top: 15px;
+    }
+    .flash-messages p {
+        color: green;
+        margin: 5px 0;
+    }
+    /* QR scanner container */
+    #qr-reader {
+        width: 300px;
+        margin: 20px auto;
+        display: none;
+    }
+    /* Modal styles */
+    #pin-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    #pin-modal .modal-content {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        width: 300px;
+        text-align: center;
+        position: relative;
+    }
+    #pin-modal .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 20px;
+        cursor: pointer;
+    }
+    #pin-modal input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        margin: 15px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    #pin-modal button {
+        background-color: #007bff;
+        color: #fff;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    #pin-modal button:hover {
+        background-color: #0056b3;
+    }
+</style>
+<div class="pay-container">
+    <!-- Scan QR Code Button -->
+    <button id="scanBtn" class="scan-btn">
+        <img src="{{ url_for('static', filename='templates/sacn.png') }}" alt="Scan Icon">
+        Scan QR Code
+    </button>
+    <!-- QR Code Scanner Container -->
+    <div id="qr-reader"></div>
+    <!-- Payment Form -->
+    <h2>Send Payment</h2>
+    <div class="balance">Current Balance: ${{ balance }}</div>
+    <form id="pay-form" method="POST" action="{{ url_for('pay') }}">
+        <label for="recipient">Recipient:</label>
+        <input type="text" id="recipient" name="recipient" placeholder="Enter recipient username" required>
+        <label for="amount">Amount:</label>
+        <input type="text" id="amount" name="amount" placeholder="Enter amount" required>
+        <label for="category">Category:</label>
+        <select id="category" name="category" required>
+            <option value="Food">Food</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Utilities">Utilities</option>
+            <option value="Education">Education</option>
+            <option value="Other">Other</option>
+        </select>
+        <!-- Fake Send Button triggers PIN modal -->
+        <button type="button" id="send-btn">Send</button>
+    </form>
+    <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, msg in messages %}
+        <p>{{ msg }}</p>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+</div>
+<!-- PIN Modal -->
+<div id="pin-modal">
+    <div class="modal-content">
+        <span class="close-btn" id="close-modal">&times;</span>
+        <h3>Enter PIN to Confirm</h3>
+        <input type="password" id="modal-pin" placeholder="Enter your PIN">
+        <button id="modal-confirm">Confirm Payment</button>
+    </div>
+</div>
+<!-- Load html5-qrcode library -->
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script>
+    // QR scanner toggle
+    document.getElementById('scanBtn').addEventListener('click', function () {
+        const qrReaderElement = document.getElementById('qr-reader');
+        if (qrReaderElement.style.display === 'none' || qrReaderElement.style.display === '') {
+            qrReaderElement.style.display = 'block';
+            const html5QrCode = new Html5Qrcode("qr-reader");
+            const config = { fps: 10, qrbox: 250 };
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText, decodedResult) => {
+                    document.getElementById('recipient').value = decodedText;
+                    html5QrCode.stop().then(() => {
+                        qrReaderElement.style.display = 'none';
+                    }).catch(err => console.error(err));
+                }
+            ).catch(err => console.error(err));
+        } else {
+            qrReaderElement.style.display = 'none';
+        }
+    });
+
+    const form = document.getElementById('pay-form');
+    const sendBtn = document.getElementById('send-btn');
+    const modal = document.getElementById('pin-modal');
+    const closeModal = document.getElementById('close-modal');
+    const modalConfirm = document.getElementById('modal-confirm');
+
+    // Show PIN modal after validating form
+    sendBtn.addEventListener('click', function () {
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        modal.style.display = 'flex';
+    });
+
+    // Close modal
+    closeModal.addEventListener('click', function () {
+        modal.style.display = 'none';
+    });
+
+    // Confirm PIN and submit form
+    modalConfirm.addEventListener('click', function () {
+        const pinValue = document.getElementById('modal-pin').value.trim();
+        if (!pinValue) {
+            alert('Please enter your PIN.');
+            return;
+        }
+        // Append hidden PIN input to form
+        let hiddenPin = form.querySelector('input[name="pin"]');
+        if (!hiddenPin) {
+            hiddenPin = document.createElement('input');
+            hiddenPin.type = 'hidden';
+            hiddenPin.name = 'pin';
+            form.appendChild(hiddenPin);
+        }
+        hiddenPin.value = pinValue;
+        form.submit();
+    });
+</script>
+{% endblock %}

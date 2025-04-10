@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Your QR Code</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        img {
+            border: 2px solid #333;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Your QR Code</h2>
+    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+    <p><a href="{{ url_for('dashboard') }}">Back to Dashboard</a></p>
+</body>
+
+</html>

@@ -1,0 +1,180 @@
+{% extends 'layout.html' %}
+{% block content %}
+<style>
+    .kid-safety-container {
+        max-width: 700px;
+        margin: 40px auto;
+        background-color: #fff;
+        padding: 20px 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .kid-safety-container h2 {
+        margin-top: 0;
+        font-size: 24px;
+        color: #333;
+        margin-bottom: 20px;
+    }
+
+    .user-cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+    }
+
+    .user-card {
+        width: 120px;
+        text-align: center;
+        cursor: pointer;
+        border: 2px solid #eee;
+        border-radius: 8px;
+        padding: 10px;
+        transition: border-color 0.3s;
+        background-color: #f9f9f9;
+    }
+
+    .user-card:hover {
+        border-color: #ccc;
+    }
+
+    .user-card p {
+        margin: 0;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .user-card.add-user {
+        background-color: #e9f7ff;
+        border: 2px dashed #007bff;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .user-card.add-user p {
+        color: #007bff;
+    }
+
+    .child-details {
+        margin-top: 30px;
+        text-align: left;
+    }
+
+    .child-details h3 {
+        margin-bottom: 10px;
+    }
+
+    .transaction-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+    }
+
+    .transaction-table th,
+    .transaction-table td {
+        border: 1px solid #ccc;
+        padding: 8px;
+    }
+
+    .transaction-table th {
+        background-color: #f2f2f2;
+    }
+
+    .download-btn {
+        margin-top: 15px;
+    }
+
+    .limit-form {
+        margin: 20px 0;
+    }
+
+    .limit-form input {
+        width: 200px;
+        padding: 6px;
+        margin-right: 10px;
+    }
+
+    .limit-form button {
+        padding: 8px 12px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+    }
+</style>
+
+<div class="kid-safety-container">
+    <h2>Kid Safety</h2>
+
+    {% if not child_username %}
+    <div class="user-cards">
+        {% for c in child_accounts %}
+        <a href="?child_username={{ c.username }}" style="text-decoration:none; color:inherit;">
+            <div class="user-card">
+                <p>{{ c.username }}</p>
+            </div>
+        </a>
+        {% endfor %}
+        <a href="{{ url_for('create_child_form') }}" style="text-decoration:none; color:inherit;">
+            <div class="user-card add-user">
+                <p>+Add User</p>
+            </div>
+        </a>
+    </div>
+    {% else %}
+    <div class="child-details">
+        <h3>Child: {{ child_username }}</h3>
+        <p><strong>Current Balance:</strong> ₹{{ child_balance }}</p>
+        <p><strong>Daily Limit:</strong> ₹{{ child_limit }}</p>
+
+        <!-- Form to update daily limit and confirmation email -->
+        <div class="limit-form">
+            <form method="POST" action="{{ url_for('set_child_limit') }}">
+                <input type="hidden" name="child_username" value="{{ child_username }}">
+                <input type="number" step="0.01" name="new_limit" placeholder="Set new limit" required>
+                <input type="email" name="confirmation_email" placeholder="Confirmation email"
+                    value="{{ confirmation_email }}" required>
+                <button type="submit">Update</button>
+            </form>
+        </div>
+
+        <h4>Latest 5 Transactions</h4>
+        {% if child_transactions %}
+        <table class="transaction-table">
+            <tr>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Timestamp</th>
+            </tr>
+            {% for tx in child_transactions[:5] %}
+            <tr>
+                <td>{{ tx.type }}</td>
+                <td>₹{{ tx.amount }}</td>
+                <td>{{ tx.timestamp_str }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <!-- Download button -->
+        <div class="download-btn">
+            <a href="{{ url_for('download_transactions', child_username=child_username) }}" class="btn btn-info">
+                Download Full Transactions
+            </a>
+        </div>
+        {% else %}
+        <p>No transactions found.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, msg in messages %}
+    <p style="color:red;">{{ msg }}</p>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+</div>
+{% endblock %}

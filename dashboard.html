@@ -1,0 +1,166 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+<!-- Promotional Banner for Kid Safety -->
+<div style="margin-bottom: 30px;">
+    <div style="
+    position: relative;
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    border-radius: 10px;
+    padding: 20px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+  ">
+        <div style="flex: 1;">
+            <h2 style="margin: 0; font-size: 1.8rem;">Keep Your Kids Safe!</h2>
+            <p style="margin: 5px 0 15px 0; font-size: 1rem;">
+                Activate Kid Safety to monitor and control your child's transactions.
+            </p>
+            <button style="
+        background-color: #fff;
+        color: #F57C00;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+      " onclick="window.location.href='{{ url_for('kid_safety') }}';">
+                Activate Now
+            </button>
+        </div>
+        <img src="{{ url_for('static', filename='kidsafety_promo.png') }}" alt="Kid Safety"
+            style="width: 120px; height: auto; border-radius: 10px; margin-left: 10px;">
+    </div>
+</div>
+
+<!-- Existing Dashboard Content -->
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2>Welcome, {{ session['username'] }}!</h2>
+    <p style="font-size: 48px; font-weight: bold; color: #007bff;">Balance: ${{ balance }}</p>
+</div>
+
+<!-- Chatbot Widget Open Button -->
+<button id="openChatbot"
+    style="position: fixed; bottom: 20px; right: 20px; background-color: #007bff; color: white; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); cursor: pointer;">
+    &#128172;
+</button>
+
+<!-- Chatbot Container (Hidden by Default) -->
+<div id="chatbotContainer"
+    style="position: fixed; bottom: 20px; right: 20px; width: 300px; max-height: 400px; background-color: #fff; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: none; flex-direction: column;">
+    <!-- Header -->
+    <div
+        style="background-color: #007bff; color: white; padding: 10px; border-top-left-radius: 10px; border-top-right-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+        <span>Chatbot</span>
+        <button id="closeChatbot"
+            style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">&times;</button>
+    </div>
+    <!-- Message Container -->
+    <div id="chatbotMessages" style="flex: 1; padding: 10px; overflow-y: auto;">
+        <!-- Chat messages will appear here -->
+    </div>
+    <!-- Input Field -->
+    <div style="padding: 10px; display: flex;">
+        <input type="text" id="chatbotInput" placeholder="Type your message..."
+            style="flex: 1; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+        <button id="chatbotSend"
+            style="padding: 5px 10px; margin-left: 5px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Send</button>
+    </div>
+</div>
+
+<!-- Chatbot Script -->
+<script>
+    // Toggle the chatbot widget
+    const openBtn = document.getElementById('openChatbot');
+    const closeBtn = document.getElementById('closeChatbot');
+    const chatbotContainer = document.getElementById('chatbotContainer');
+    const chatbotMessages = document.getElementById('chatbotMessages');
+    const chatbotInput = document.getElementById('chatbotInput');
+    const chatbotSend = document.getElementById('chatbotSend');
+
+    openBtn.addEventListener('click', () => {
+        chatbotContainer.style.display = 'flex';
+        openBtn.style.display = 'none';
+    });
+
+    closeBtn.addEventListener('click', () => {
+        chatbotContainer.style.display = 'none';
+        openBtn.style.display = 'block';
+    });
+
+    // Function to get chatbot responses with expanded responses
+    function getChatbotResponse(message) {
+        message = message.toLowerCase();
+        if (message.includes("hi") || message.includes("hello")) {
+            return "Hello! How can I help you today?";
+        } else if (message.includes("how are you")) {
+            return "I'm here to assist you with HOPE PAY. How can I help?";
+        } else if (message.includes("bye")) {
+            return "Goodbye! Have a great day!";
+        } else if (message.includes("balance")) {
+            return "You can view your current balance at the top of your dashboard.";
+        } else if (message.includes("pay") || message.includes("payment")) {
+            return "To make a payment, click the 'Pay' button. Enter the recipient's username, amount, and select a category before submitting.";
+        } else if (message.includes("history") || message.includes("transaction")) {
+            return "Click on the 'History' link in the navigation bar to view your past transactions.";
+        } else if (message.includes("kid") && message.includes("safety")) {
+            return "Kid Safety lets you manage child accounts by setting spending limits and reviewing their transactions. Activate it from the promotion banner above!";
+        } else if (message.includes("pin")) {
+            return "To update your PIN, navigate to the 'Settings' page and enter your new PIN along with confirmation.";
+        } else if (message.includes("profile")) {
+            return "Your profile displays your personal details. Click 'Profile' in the navigation bar to view or edit your information.";
+        } else if (message.includes("help") || message.includes("how to use")) {
+            return "Here are some tips for using HOPE PAY:<br>" +
+                "• Check your balance on the dashboard.<br>" +
+                "• Use the 'Pay' section to send payments.<br>" +
+                "• View your transaction history under 'History'.<br>" +
+                "• Manage child accounts in 'Kid Safety'.<br>" +
+                "• Update your PIN in 'Settings'.<br>" +
+                "• Edit your profile in the 'Profile' section.";
+        } else if (message.includes("contact")) {
+            return "For further assistance, contact support@hopepay.com or call +1 (800) 123-4567.";
+        } else {
+            return "I'm sorry, I didn't understand that. Please ask about 'pay', 'balance', 'history', 'kid safety', 'PIN', or 'profile'.";
+        }
+    }
+
+    // Send message handler
+    chatbotSend.addEventListener('click', () => {
+        const message = chatbotInput.value.trim();
+        if (message === "") return;
+        // Append user's message
+        const userMsg = document.createElement('div');
+        userMsg.style.margin = '5px 0';
+        userMsg.style.padding = '5px 10px';
+        userMsg.style.backgroundColor = '#e9ecef';
+        userMsg.style.borderRadius = '5px';
+        userMsg.textContent = "You: " + message;
+        chatbotMessages.appendChild(userMsg);
+        chatbotInput.value = "";
+        // Get and display chatbot response after a delay
+        setTimeout(() => {
+            const response = getChatbotResponse(message);
+            const botMsg = document.createElement('div');
+            botMsg.style.margin = '5px 0';
+            botMsg.style.padding = '5px 10px';
+            botMsg.style.backgroundColor = '#d1ecf1';
+            botMsg.style.borderRadius = '5px';
+            botMsg.innerHTML = "Chatbot: " + response;
+            chatbotMessages.appendChild(botMsg);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }, 1000);
+    });
+
+    // Allow sending with Enter key
+    chatbotInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            chatbotSend.click();
+            e.preventDefault();
+        }
+    });
+</script>
+
+{% endblock %}

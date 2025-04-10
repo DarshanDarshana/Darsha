@@ -1,0 +1,33 @@
+{% extends 'layout.html' %}
+{% block content %}
+<style>
+    .balance-container {
+        max-width: 400px;
+        margin: 40px auto;
+        background-color: #fff;
+        padding: 20px 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .balance-container h2 {
+        margin-top: 0;
+        font-size: 24px;
+        color: #333;
+    }
+
+    .balance-amount {
+        font-size: 20px;
+        color: #007bff;
+        margin-top: 20px;
+    }
+</style>
+
+<div class="balance-container">
+    <h2>Child: {{ child_username }}</h2>
+    <div class="balance-amount">
+        Current Balance: ₹{{ child_balance }}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends 'layout.html' %}
+{% block content %}
+<style>
+    .about-container {
+        max-width: 800px;
+        margin: 40px auto;
+        background: #fff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .widget {
+        border: 1px solid #ccc;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 6px;
+    }
+
+    .widget h3 {
+        margin-bottom: 10px;
+        color: #007bff;
+    }
+
+    .widget p,
+    .widget ul {
+        font-size: 16px;
+        line-height: 1.6;
+        color: #333;
+    }
+
+    .widget ul {
+        list-style-type: disc;
+        margin-left: 20px;
+    }
+</style>
+
+<div class="about-container">
+    <h2>About HOPE PAY</h2>
+
+    <div class="widget">
+        <h3>Project Overview</h3>
+        <p>
+            HOPE PAY is a secure digital payment platform designed for families. The project integrates MySQL for data
+            management, Firebase Firestore for real-time transaction logging, and various modern web technologies to
+            provide an intuitive user experience. Its primary goal is to enable seamless, secure transactions between
+            parents and children.
+        </p>
+    </div>
+
+    <div class="widget">
+        <h3>Children Safety</h3>
+        <p>
+            Safety is a top priority. Parents can create child accounts with preset daily spending limits. If a child
+            attempts to exceed these limits, the system automatically sends an email for parental confirmation, ensuring
+            every transaction is monitored and approved.
+        </p>
+    </div>
+
+    <div class="widget">
+        <h3>Key Features & Widgets</h3>
+        <ul>
+            <li><strong>Secure Payment Processing:</strong> Real-time updates and secure logging of all transactions.
+            </li>
+            <li><strong>QR Code Integration:</strong> Generate and scan QR codes for quick payments and sharing.</li>
+            <li><strong>Email Notifications:</strong> Immediate alerts for transactions exceeding predefined limits.
+            </li>
+            <li><strong>User-Friendly Interface:</strong> An intuitive design that caters to both parents and children.
+            </li>
+        </ul>
+    </div>
+
+    <div class="widget">
+        <h3>Commitment to Privacy and Security</h3>
+        <p>
+            HOPE PAY is committed to protecting user data. By using secure password hashing and encrypted data
+            transfers, the platform ensures that all financial and personal information remains confidential and secure.
+        </p>
+    </div>
+</div>
+{% endblock %}

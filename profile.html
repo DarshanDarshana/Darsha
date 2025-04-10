@@ -1,0 +1,64 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+<!-- Profile Header Section -->
+<div
+    style="max-width: 600px; margin: auto; padding: 20px; text-align: center; background: #f9f9f9; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+
+    <!-- Profile Picture -->
+    <img src="{{ url_for('static', filename='profile_pics/default.jpg') }}" alt="Profile Picture"
+        style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff;">
+
+    <!-- Username -->
+    <h2 style="margin-top: 10px; color: #333;">{{ user.username }}</h2>
+
+    <!-- Bio Section -->
+    <div style="margin-top: 10px; font-size: 16px; color: #666;">
+        <p id="bioText">{{ user.bio if user.bio else "No bio added yet." }}</p>
+        <button onclick="editField('bioText', 'bioInput', 'saveBio')"
+            style="border: none; background: none; color: #007bff; cursor: pointer;">Edit</button>
+        <input type="text" id="bioInput" style="display: none;" placeholder="Enter your bio">
+        <button id="saveBio" onclick="saveBio()"
+            style="display: none; border: none; background: none; color: green; cursor: pointer;">✔</button>
+    </div>
+
+    <!-- Phone Number -->
+    <div style="margin-top: 10px; font-size: 16px; color: #666;">
+        <p id="phoneText">{{ user.phone if user.phone else "No phone number added." }}</p>
+        <button onclick="editField('phoneText', 'phoneInput', 'savePhone')"
+            style="border: none; background: none; color: #007bff; cursor: pointer;">Edit</button>
+        <input type="text" id="phoneInput" style="display: none;" placeholder="Enter your phone number">
+        <button id="savePhone" onclick="savePhone()"
+            style="display: none; border: none; background: none; color: green; cursor: pointer;">✔</button>
+    </div>
+
+</div>
+
+<script>
+    // Function to enable editing of bio and phone fields
+    function editField(textId, inputId, saveId) {
+        document.getElementById(textId).style.display = 'none';
+        document.getElementById(inputId).style.display = 'inline-block';
+        document.getElementById(saveId).style.display = 'inline-block';
+    }
+
+    // Function to save Bio
+    function saveBio() {
+        let bioInput = document.getElementById("bioInput").value;
+        document.getElementById("bioText").innerText = bioInput;
+        document.getElementById("bioText").style.display = 'block';
+        document.getElementById("bioInput").style.display = 'none';
+        document.getElementById("saveBio").style.display = 'none';
+    }
+
+    // Function to save Phone Number
+    function savePhone() {
+        let phoneInput = document.getElementById("phoneInput").value;
+        document.getElementById("phoneText").innerText = phoneInput;
+        document.getElementById("phoneText").style.display = 'block';
+        document.getElementById("phoneInput").style.display = 'none';
+        document.getElementById("savePhone").style.display = 'none';
+    }
+</script>
+
+{% endblock %}

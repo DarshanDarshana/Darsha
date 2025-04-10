@@ -1,0 +1,47 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white text-center">
+                    <h2 class="mb-0">Create Child Account</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('create_child') }}">
+                        <div class="mb-3">
+                            <label for="child_username" class="form-label">Child Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" id="child_username" name="child_username"
+                                    placeholder="Enter username" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="child_password" class="form-label">Child Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" id="child_password" name="child_password"
+                                    placeholder="Enter password" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="child_phone" class="form-label">Child Phone Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input type="text" class="form-control" id="child_phone" name="child_phone"
+                                    placeholder="e.g. +91XXXXXXXXXX" value="+91" required pattern="^\+\d{10,15}$"
+                                    title="Enter a valid phone number with country code">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">Create Account</button>
+                    </form>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{{ url_for('kid_safety') }}" class="btn btn-link">Back to Kid Safety</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

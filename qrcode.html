@@ -1,0 +1,74 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div style="text-align: center; margin-top: 40px;">
+    <h2>Your QR Code</h2>
+    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" style="border: 2px solid #333; margin: 20px 0;">
+    <div style="margin: 20px;">
+        <!-- Download Button -->
+        <a href="data:image/png;base64,{{ qr_code }}" download="qrcode.png"
+            style="padding: 10px 20px; background-color: #2c3e50; color: #fff; text-decoration: none; border-radius: 5px; margin-right: 10px;">
+            Download QR Code
+        </a>
+        <!-- Share Button -->
+        <button id="shareBtn"
+            style="padding: 10px 20px; background-color: #2c3e50; color: #fff; border: none; border-radius: 5px;">
+            Share QR Code
+        </button>
+    </div>
+    <p>
+        <a href="{{ url_for('dashboard') }}" style="text-decoration: none; color: #2c3e50;">
+            Back to Dashboard
+        </a>
+    </p>
+</div>
+
+<script>
+    // Helper function to convert base64 string to Blob
+    function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
+        const byteCharacters = atob(b64Data);
+        const byteArrays = [];
+        for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+            const slice = byteCharacters.slice(offset, offset + sliceSize);
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+                byteNumbers[i] = slice.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+        }
+        return new Blob(byteArrays, { type: contentType });
+    }
+
+    document.getElementById('shareBtn').addEventListener('click', async () => {
+        const base64Data = "{{ qr_code }}";
+        // Check if the browser supports sharing files
+        if (navigator.canShare && navigator.canShare({ files: [] })) {
+            const blob = b64toBlob(base64Data, 'image/png');
+            const file = new File([blob], "qrcode.png", { type: 'image/png' });
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: 'My QR Code',
+                    text: 'Here is my QR Code'
+                });
+            } catch (error) {
+                console.error('Error sharing:', error);
+            }
+        } else if (navigator.share) {
+            // Fallback: share URL and text if file sharing is not supported
+            try {
+                await navigator.share({
+                    title: 'My QR Code',
+                    text: 'Check out my QR Code!',
+                    url: window.location.href
+                });
+            } catch (error) {
+                console.error('Error sharing:', error);
+            }
+        } else {
+            alert('Share feature is not supported on this browser.');
+        }
+    });
+</script>
+{% endblock %}
